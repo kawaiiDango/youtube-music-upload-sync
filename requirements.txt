@@ -1,0 +1,3 @@
+mutagen
+ytmusicapi
+ordered-set
