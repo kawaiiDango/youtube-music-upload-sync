@@ -1,10 +1,10 @@
 # Youtube Music Upload Sync
 
 ### Setup
-Put your music folders in `folders.json`
-Copy the request headers into `headers_auth_raw.txt`
+- Put your music folders in `folders.json`
+- Copy the request headers into `headers_auth_raw.txt`
 (See https://ytmusicapi.readthedocs.io/en/latest/setup.html#authenticated-requests)
-`pip install --user -r requirements.txt`
+- `pip install --user -r requirements.txt`
 
 ### Run
 `python3 sync.py`
