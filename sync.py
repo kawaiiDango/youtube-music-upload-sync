@@ -179,7 +179,12 @@ def uploadTracks(tracks, uploadedTracks):
                     "(" + str(i+1) + " / " + str(len(tracks)) + ")" )
             res = ytmusic.upload_song(track.filePath)
             if res != 'STATUS_SUCCEEDED':
-                print("failed", res) #may fail with 409 (duplicate), which is a success
+                if res.status_code == 401:
+                    print("unauthorized")
+                    break
+                elif res.status_code != 409:
+                    print("failed", res) #may fail with 409 (duplicate), which is a success
+                    continue
             uploadedTracks.add(track) 
             # print(track.toDict())
             i += 1
