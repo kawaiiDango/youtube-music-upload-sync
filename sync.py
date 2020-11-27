@@ -1,3 +1,5 @@
+#!/bin/env python3
+
 import mutagen
 from ytmusicapi import YTMusic
 from ordered_set import OrderedSet
@@ -7,9 +9,9 @@ import os
 import sys
 
 from track import Track
-from getch import getch
 
 SUPPORTED_EXTS = [".mp3", ".m4a", ".ogg", ".flac", ".wma"]
+
 
 def setup():
     global ytmusic
@@ -19,12 +21,14 @@ def setup():
         os.remove("headers_auth_raw.txt")
     ytmusic = YTMusic('headers_auth.json')
 
+
 def dumpToCache(tracks):
     tracksList = []
     for track in tracks:
         tracksList.append(track.toDict())
     with open("library_cache.json", "w") as f:
         json.dump({"tracks": tracksList} , f, indent=4)
+
 
 def loadCache():
     tracksSet = OrderedSet()
@@ -33,6 +37,7 @@ def loadCache():
         for trackDict in tracks["tracks"]:
             tracksSet.add(Track.fromDict(trackDict))
     return tracksSet
+
 
 def getAllUploadedTracks():
     tracksSet = OrderedSet()
@@ -54,6 +59,7 @@ def getAllUploadedTracks():
         print("using library_cache.json")
         tracksSet = loadCache()
     return tracksSet
+
 
 def getAllLocalTracks():
     print("Reading tags from local files...")
@@ -135,13 +141,15 @@ def getAllLocalTracks():
 
     return tracks
 
+
 def confirm(msg):
     print(msg + " [y/N]: ", end="", flush=True)
-    ch = getch().decode("utf-8")
+    ch = input()
     print(ch)
     if ch == '\x03':
         raise KeyboardInterrupt
-    return ch == 'y' or ch == 'Y'
+    return ch.lower() == 'y' or ch.lower() == 'yes'
+
 
 def deleteTracks(tracks):
     deletedTracks = OrderedSet()
@@ -169,6 +177,7 @@ def deleteTracks(tracks):
         pass
     return deletedTracks
 
+
 def uploadTracks(tracks, uploadedTracks):
     print("Will upload " + str(len(tracks)) + " songs")
     i = 0
@@ -185,7 +194,7 @@ def uploadTracks(tracks, uploadedTracks):
                 elif res.status_code != 409:
                     print("failed", res) #may fail with 409 (duplicate), which is a success
                     continue
-            uploadedTracks.add(track) 
+            uploadedTracks.add(track)
             # print(track.toDict())
             i += 1
     except:
