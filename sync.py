@@ -139,7 +139,7 @@ def getAllLocalTracks():
 
 def confirm(msg):
     print(msg + " [y/N]: ", end="", flush=True)
-    ch = getch().decode("utf-8")
+    ch = getch()
     print(ch)
     if ch == '\x03':
         raise KeyboardInterrupt
