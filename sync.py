@@ -13,20 +13,24 @@ from getch import getch
 
 SUPPORTED_EXTS = [".mp3", ".m4a", ".ogg", ".flac", ".wma"]
 
+
 def setup():
     global ytmusic
     if os.path.exists("headers_auth_raw.txt"):
         with open("headers_auth_raw.txt", "r") as headersRaw:
-            YTMusic.setup(filepath="headers_auth.json", headers_raw=headersRaw.read())
+            YTMusic.setup(filepath="headers_auth.json",
+                          headers_raw=headersRaw.read())
         os.remove("headers_auth_raw.txt")
     ytmusic = YTMusic('headers_auth.json')
+
 
 def dumpToCache(tracks):
     tracksList = []
     for track in tracks:
         tracksList.append(track.toDict())
     with open("library_cache.json", "w") as f:
-        json.dump({"tracks": tracksList} , f, indent=4)
+        json.dump({"tracks": tracksList}, f, indent=4)
+
 
 def loadCache():
     tracksSet = OrderedSet()
@@ -35,6 +39,7 @@ def loadCache():
         for trackDict in tracks["tracks"]:
             tracksSet.add(Track.fromDict(trackDict))
     return tracksSet
+
 
 def getAllUploadedTracks():
     tracksSet = OrderedSet()
@@ -57,6 +62,7 @@ def getAllUploadedTracks():
         tracksSet = loadCache()
     return tracksSet
 
+
 def getAllLocalTracks():
     print("Reading tags from local files...")
     folders = []
@@ -70,7 +76,11 @@ def getAllLocalTracks():
                 _filename, fileExtension = os.path.splitext(filename)
                 fileExtension = fileExtension.lower()
                 if fileExtension in SUPPORTED_EXTS:
-                    metadata = mutagen.File(filePath)
+                    try:
+                        metadata = mutagen.File(filePath)
+                    except mutagen.MutagenError as e:
+                        print(f"{filename}: {e}")
+                        continue
                     if not metadata:
                         print("no tags for " + filePath)
                         continue
@@ -137,6 +147,7 @@ def getAllLocalTracks():
 
     return tracks
 
+
 def confirm(msg):
     print(msg + " [y/N]: ", end="", flush=True)
     ch = getch()
@@ -144,6 +155,7 @@ def confirm(msg):
     if ch == '\x03':
         raise KeyboardInterrupt
     return ch == 'y' or ch == 'Y'
+
 
 def deleteTracks(tracks):
     deletedTracks = OrderedSet()
@@ -158,7 +170,7 @@ def deleteTracks(tracks):
             confirmAll = True
         for track in tracks:
             print("Delete " + str(track.artist) + " - " + str(track.title) +
-                    " [" + str(track.album) + "]", end="")
+                  " [" + str(track.album) + "]", end="")
             if confirmAll or confirm("?"):
                 if confirmAll:
                     print()
@@ -171,23 +183,25 @@ def deleteTracks(tracks):
         pass
     return deletedTracks
 
+
 def uploadTracks(tracks, uploadedTracks):
     print("Will upload " + str(len(tracks)) + " songs")
     i = 0
     try:
         for track in tracks:
             print("Uploading " + track.filePath + " " +
-                    str(round(i*100/len(tracks), 2)) + "% " +
-                    "(" + str(i+1) + " / " + str(len(tracks)) + ")" )
+                  str(round(i*100/len(tracks), 2)) + "% " +
+                  "(" + str(i+1) + " / " + str(len(tracks)) + ")")
             res = ytmusic.upload_song(track.filePath)
             if res != 'STATUS_SUCCEEDED':
                 if res.status_code == 401:
                     print("unauthorized")
                     break
                 elif res.status_code != 409:
-                    print("failed", res) #may fail with 409 (duplicate), which is a success
+                    # may fail with 409 (duplicate), which is a success
+                    print("failed", res)
                     continue
-            uploadedTracks.add(track) 
+            uploadedTracks.add(track)
             # print(track.toDict())
             i += 1
     except:
