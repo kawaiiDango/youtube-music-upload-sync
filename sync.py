@@ -43,7 +43,7 @@ def loadCache():
 
 def getAllUploadedTracks():
     tracksSet = OrderedSet()
-    if not os.path.exists("library_cache.json") or\
+    if not os.path.exists("library_cache.json") or \
             ("--rebuild-cache" in sys.argv or "-rc" in sys.argv):
         print("Fetching list of uploaded songs. For a lot of songs, this may take a long time...")
         tracks = ytmusic.get_library_upload_songs(limit=100000)
@@ -187,11 +187,11 @@ def deleteTracks(tracks):
 def uploadTracks(tracks, uploadedTracks):
     print("Will upload " + str(len(tracks)) + " songs")
     i = 0
-    try:
-        for track in tracks:
+    for track in tracks:
+        try:
             print("Uploading " + track.filePath + " " +
-                  str(round(i*100/len(tracks), 2)) + "% " +
-                  "(" + str(i+1) + " / " + str(len(tracks)) + ")")
+                  str(round(i * 100 / len(tracks), 2)) + "% " +
+                  "(" + str(i + 1) + " / " + str(len(tracks)) + ")")
             res = ytmusic.upload_song(track.filePath)
             if res != 'STATUS_SUCCEEDED':
                 if res.status_code == 401:
@@ -204,8 +204,11 @@ def uploadTracks(tracks, uploadedTracks):
             uploadedTracks.add(track)
             # print(track.toDict())
             i += 1
-    except:
-        pass
+        except Exception as e:
+            print("Exception: ", str(e))
+        except:
+            print("Unexpected error:", sys.exc_info()[0])
+
     return uploadedTracks
 
 
