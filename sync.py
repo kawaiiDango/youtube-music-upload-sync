@@ -204,6 +204,8 @@ def uploadTracks(tracks, uploadedTracks):
             uploadedTracks.add(track)
             # print(track.toDict())
             i += 1
+        except KeyboardInterrupt:
+            break
         except Exception as e:
             print("Exception: ", str(e))
         except:
