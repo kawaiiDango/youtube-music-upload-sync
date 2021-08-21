@@ -49,8 +49,8 @@ def getAllUploadedTracks():
         tracks = ytmusic.get_library_upload_songs(limit=100000)
         for yttrack in tracks:
             track = Track()
-            if yttrack["artist"]:
-                track.artist = yttrack["artist"][0]["name"].strip()
+            if yttrack["artists"]:
+                track.artist = yttrack["artists"][0]["name"].strip()
             if yttrack["album"]:
                 track.album = yttrack["album"]["name"].strip()
             track.title = yttrack["title"].strip()
