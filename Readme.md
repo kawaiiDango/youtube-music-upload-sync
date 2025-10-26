@@ -3,7 +3,7 @@
 ### Setup
 - Put your music folders in `folders.json`
 - Copy the request headers into `headers_auth_raw.txt`
-(See https://ytmusicapi.readthedocs.io/en/latest/setup.html#authenticated-requests)
+(See https://ytmusicapi.readthedocs.io/en/stable/setup/browser.html#using-the-headers-in-your-project)
 - `pip install --user -r requirements.txt`
 
 ### Run

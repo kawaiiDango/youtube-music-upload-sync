@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import mutagen
-from ytmusicapi import YTMusic
+import ytmusicapi
 from ordered_set import OrderedSet
 
 import json
@@ -16,12 +16,13 @@ SUPPORTED_EXTS = [".mp3", ".m4a", ".ogg", ".flac", ".wma"]
 
 def setup():
     global ytmusic
-    if os.path.exists("headers_auth_raw.txt"):
-        with open("headers_auth_raw.txt", "r") as headersRaw:
-            YTMusic.setup(filepath="headers_auth.json",
-                          headers_raw=headersRaw.read())
-        os.remove("headers_auth_raw.txt")
-    ytmusic = YTMusic('headers_auth.json')
+    # https://ytmusicapi.readthedocs.io/en/stable/setup/browser.html#using-the-headers-in-your-project
+    # generate the browser.json file with: 'ytmusicapi browser' and paste "Request Headers" from Firefox dev interface on :
+    # Website : music.youtube.com
+    # Firefox dev tools -> Network tab 
+    # -> Status 200, Method POST, Domain music.youtube.com, File browse?..
+    # -> Right click -> Copy Value -> Copy request headers
+    ytmusic = ytmusicapi.YTMusic('browser.json')
 
 
 def dumpToCache(tracks):
