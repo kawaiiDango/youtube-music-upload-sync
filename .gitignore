@@ -2,3 +2,4 @@ headers_auth.json
 headers_auth_raw.txt
 library_cache*.json
 __pycache__
+browser.json
