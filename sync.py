@@ -44,10 +44,9 @@ def loadCache(filename):
     return tracksSet
 
 
-def getAllUploadedTracks():
+def getAllUploadedTracks(cleanCache=False):
     tracksSet = OrderedSet()
-    if not os.path.exists(UPLOADED_CACHE_JSON) or \
-            ("--rebuild-cache" in sys.argv or "-rc" in sys.argv):
+    if not os.path.exists(UPLOADED_CACHE_JSON) or cleanCache:
         print("Fetching list of uploaded songs. For a lot of songs, this may take a long time...")
         tracks = ytmusic.get_library_upload_songs(limit=100000)
         for yttrack in tracks:
@@ -67,9 +66,8 @@ def getAllUploadedTracks():
     return tracksSet
 
 
-def getAllLocalTracks():
-    if not os.path.exists(LOCAL_CACHE_JSON) or \
-        ("--rebuild-cache" in sys.argv or "-rc" in sys.argv):
+def getAllLocalTracks(cleanCache=False):
+    if not os.path.exists(LOCAL_CACHE_JSON) or cleanCache:
         print("Reading tags from local files...")
         folders = []
         tracks = OrderedSet()
@@ -170,9 +168,6 @@ def confirm(msg):
 
 def deleteTracks(tracks):
     deletedTracks = OrderedSet()
-    if not ("--delete" in sys.argv or "-d" in sys.argv) or len(tracks) == 0:
-        return deletedTracks
-    print("Will delete " + str(len(tracks)) + " songs from Youtube Music")
     confirmAll = False
     try:
         if sys.stdout.isatty():
@@ -228,18 +223,28 @@ def uploadTracks(tracks, uploadedTracks):
 if __name__ == "__main__":
     setup()
     try:
-        uploadedTracks = getAllUploadedTracks()
-        localTracks = getAllLocalTracks()
+        # List tracks (from cache or fetch)
+        cleanCache =  ("--rebuild-cache" in sys.argv or "-rc" in sys.argv)
+        uploadedTracks = getAllUploadedTracks(cleanCache=cleanCache)
+        localTracks = getAllLocalTracks(cleanCache=cleanCache)
+        print("=> Local tracks: " + str(len(localTracks)))
+        print("=> Uploaded tracks: " + str(len(uploadedTracks)))
 
-        deletedTracks = deleteTracks(uploadedTracks - localTracks)
-        if len(deletedTracks) > 0:
-            uploadedTracks = uploadedTracks - deletedTracks
-            dumpToCache(uploadedTracks)
-
+        # Delete tracks if required
+        tracksToDelete = uploadedTracks - localTracks
+        if ("--delete" in sys.argv or "-d" in sys.argv) and len(tracksToDelete) > 0:
+            print("==> To delete: " + str(len(tracksToDelete)) + " songs")
+            input("Press Enter to start deleting...")
+            deletedTracks = deleteTracks(tracksToDelete)
+            dumpToCache(uploadedTracks-deletedTracks, UPLOADED_CACHE_JSON)
+    
+        # Upload tracks       
         tracksToUpload = localTracks - uploadedTracks
+        print("==> To upload: " + str(len(tracksToUpload)))
         if len(tracksToUpload) > 0:
+            input("Press Enter to start uploading...")
             uploadedTracks = uploadTracks(tracksToUpload, uploadedTracks)
-            dumpToCache(uploadedTracks)
+            dumpToCache(uploadedTracks, UPLOADED_CACHE_JSON)
     except:
         print("Unexpected error:", sys.exc_info()[0])
         raise
