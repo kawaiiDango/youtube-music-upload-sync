@@ -29,7 +29,7 @@ def setup():
 
 def dumpToCache(tracks,filename):
     tracksList = []
-    by_title = OrderedSet(sorted(tracks, key=lambda t: t.artist + t.title))  
+    by_title = OrderedSet(sorted(tracks, key=lambda t: f"{t.artist}{t.title}"))  
     for track in by_title:
         tracksList.append(track.toDict())
     with open(filename, "w") as f:
