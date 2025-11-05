@@ -12,6 +12,8 @@ from track import Track
 from getch import getch
 
 SUPPORTED_EXTS = [".mp3", ".m4a", ".ogg", ".flac", ".wma"]
+LOCAL_CACHE_JSON = "local_cache.json"
+UPLOADED_CACHE_JSON = "library_cache.json"
 
 
 def setup():
@@ -25,17 +27,17 @@ def setup():
     ytmusic = ytmusicapi.YTMusic('browser.json')
 
 
-def dumpToCache(tracks):
+def dumpToCache(tracks,filename):
     tracksList = []
-    for track in tracks:
+    by_title = OrderedSet(sorted(tracks, key=lambda t: t.artist + t.title))  
+    for track in by_title:
         tracksList.append(track.toDict())
-    with open("library_cache.json", "w") as f:
+    with open(filename, "w") as f:
         json.dump({"tracks": tracksList}, f, indent=4)
 
-
-def loadCache():
+def loadCache(filename):
     tracksSet = OrderedSet()
-    with open("library_cache.json", "r") as f:
+    with open(filename, "r") as f:
         tracks = json.load(f)
         for trackDict in tracks["tracks"]:
             tracksSet.add(Track.fromDict(trackDict))
@@ -44,7 +46,7 @@ def loadCache():
 
 def getAllUploadedTracks():
     tracksSet = OrderedSet()
-    if not os.path.exists("library_cache.json") or \
+    if not os.path.exists(UPLOADED_CACHE_JSON) or \
             ("--rebuild-cache" in sys.argv or "-rc" in sys.argv):
         print("Fetching list of uploaded songs. For a lot of songs, this may take a long time...")
         tracks = ytmusic.get_library_upload_songs(limit=100000)
@@ -57,94 +59,102 @@ def getAllUploadedTracks():
             track.title = yttrack["title"].strip()
             track.entityId = yttrack["entityId"]
             tracksSet.add(track)
-            dumpToCache(tracksSet)
+            dumpToCache(tracksSet,UPLOADED_CACHE_JSON)
+        print("UploadedTracks cached to " + UPLOADED_CACHE_JSON)
     else:
-        print("using library_cache.json")
-        tracksSet = loadCache()
+        print("using " + UPLOADED_CACHE_JSON)
+        tracksSet = loadCache(UPLOADED_CACHE_JSON)
     return tracksSet
 
 
 def getAllLocalTracks():
-    print("Reading tags from local files...")
-    folders = []
-    tracks = OrderedSet()
-    with open("folders.json", "r") as foldersJson:
-        folders = json.loads(foldersJson.read())["folders"]
-    for folder in folders:
-        for root, subdirs, files in os.walk(folder):
-            for filename in files:
-                filePath = os.path.join(root, filename)
-                _filename, fileExtension = os.path.splitext(filename)
-                fileExtension = fileExtension.lower()
-                if fileExtension in SUPPORTED_EXTS:
-                    try:
-                        metadata = mutagen.File(filePath)
-                    except mutagen.MutagenError as e:
-                        print(f"{filename}: {e}")
-                        continue
-                    if not metadata:
-                        print("no tags for " + filePath)
-                        continue
-                    artist = None
-                    album = None
-                    title = None
+    if not os.path.exists(LOCAL_CACHE_JSON) or \
+        ("--rebuild-cache" in sys.argv or "-rc" in sys.argv):
+        print("Reading tags from local files...")
+        folders = []
+        tracks = OrderedSet()
+        with open("folders.json", "r") as foldersJson:
+            folders = json.loads(foldersJson.read())["folders"]
+        for folder in folders:
+            for root, subdirs, files in os.walk(folder):
+                for filename in files:
+                    filePath = os.path.join(root, filename)
+                    _filename, fileExtension = os.path.splitext(filename)
+                    fileExtension = fileExtension.lower()
+                    if fileExtension in SUPPORTED_EXTS:
+                        try:
+                            metadata = mutagen.File(filePath)
+                        except mutagen.MutagenError as e:
+                            print(f"{filename}: {e}")
+                            continue
+                        if not metadata:
+                            print("no tags for " + filePath)
+                            continue
+                        artist = None
+                        album = None
+                        title = None
 
-                    if (fileExtension == ".flac" or fileExtension == ".ogg"):
-                        if metadata.get("artist"):
-                            artist = metadata.get("artist")[0]
-                        elif metadata.get("albumartist"):
-                            artist = metadata.get("albumartist")[0]
-                        if metadata.get("album"):
-                            album = metadata.get("album")[0]
-                        if metadata.get("title"):
-                            title = metadata.get("title")[0]
-                    elif fileExtension == ".mp3":
-                        if metadata.get("TPE1"):
-                            artist = metadata.get("TPE1")[0]
-                        elif metadata.get("TPE2"):
-                            artist = metadata.get("TPE2")[0]
-                        if metadata.get("TALB"):
-                            album = metadata.get("TALB")[0]
-                        if metadata.get("TIT2"):
-                            title = metadata.get("TIT2")[0]
-                    elif fileExtension == ".m4a":
-                        if metadata.get("\xa9ART"):
-                            artist = metadata.get("\xa9ART")[0]
-                        elif metadata.get("aART"):
-                            artist = metadata.get("aART")[0]
-                        if metadata.get("\xa9alb"):
-                            album = metadata.get("\xa9alb")[0]
-                        if metadata.get("\xa9nam"):
-                            title = metadata.get("\xa9nam")[0]
-                    elif fileExtension == ".wma":
-                        if metadata.get("Author"):
-                            artist = metadata.get("Author")[0].value
-                        elif metadata.get("WM/Composer"):
-                            artist = metadata.get("WM/Composer")[0].value
-                        if metadata.get("WM/AlbumTitle"):
-                            album = metadata.get("WM/AlbumTitle")[0].value
-                        if metadata.get("Title"):
-                            title = metadata.get("Title")[0].value
-                    if artist:
-                        artist = artist.strip()
-                        if ", " in artist:
-                            splits = []
-                            for split in artist.split(", "):
-                                splits.append(split.strip())
-                            artist = ", ".join(splits)
-                    if album:
-                        album = album.strip()
-                    if title:
-                        title = title.strip()
-                    if not title:
-                        print("no tags for " + filePath)
-                    else:
-                        track = Track()
-                        track.artist = artist
-                        track.album = album
-                        track.title = title
-                        track.filePath = filePath
-                        tracks.add(track)
+                        if (fileExtension == ".flac" or fileExtension == ".ogg"):
+                            if metadata.get("artist"):
+                                artist = metadata.get("artist")[0]
+                            elif metadata.get("albumartist"):
+                                artist = metadata.get("albumartist")[0]
+                            if metadata.get("album"):
+                                album = metadata.get("album")[0]
+                            if metadata.get("title"):
+                                title = metadata.get("title")[0]
+                        elif fileExtension == ".mp3":
+                            if metadata.get("TPE1"):
+                                artist = metadata.get("TPE1")[0]
+                            elif metadata.get("TPE2"):
+                                artist = metadata.get("TPE2")[0]
+                            if metadata.get("TALB"):
+                                album = metadata.get("TALB")[0]
+                            if metadata.get("TIT2"):
+                                title = metadata.get("TIT2")[0]
+                        elif fileExtension == ".m4a":
+                            if metadata.get("\xa9ART"):
+                                artist = metadata.get("\xa9ART")[0]
+                            elif metadata.get("aART"):
+                                artist = metadata.get("aART")[0]
+                            if metadata.get("\xa9alb"):
+                                album = metadata.get("\xa9alb")[0]
+                            if metadata.get("\xa9nam"):
+                                title = metadata.get("\xa9nam")[0]
+                        elif fileExtension == ".wma":
+                            if metadata.get("Author"):
+                                artist = metadata.get("Author")[0].value
+                            elif metadata.get("WM/Composer"):
+                                artist = metadata.get("WM/Composer")[0].value
+                            if metadata.get("WM/AlbumTitle"):
+                                album = metadata.get("WM/AlbumTitle")[0].value
+                            if metadata.get("Title"):
+                                title = metadata.get("Title")[0].value
+                        if artist:
+                            artist = artist.strip()
+                            if ", " in artist:
+                                splits = []
+                                for split in artist.split(", "):
+                                    splits.append(split.strip())
+                                artist = ", ".join(splits)
+                        if album:
+                            album = album.strip()
+                        if title:
+                            title = title.strip()
+                        if not title:
+                            print("no tags for " + filePath)
+                        else:
+                            track = Track()
+                            track.artist = artist
+                            track.album = album
+                            track.title = title
+                            track.filePath = filePath
+                            tracks.add(track)
+        dumpToCache(tracks,LOCAL_CACHE_JSON)
+        print("Local Tracks cached to " + LOCAL_CACHE_JSON)
+    else:
+        print("using local_cache.json")
+        tracks = loadCache(LOCAL_CACHE_JSON)
 
     return tracks
 
@@ -217,15 +227,19 @@ def uploadTracks(tracks, uploadedTracks):
 
 if __name__ == "__main__":
     setup()
-    uploadedTracks = getAllUploadedTracks()
-    localTracks = getAllLocalTracks()
+    try:
+        uploadedTracks = getAllUploadedTracks()
+        localTracks = getAllLocalTracks()
 
-    deletedTracks = deleteTracks(uploadedTracks - localTracks)
-    if len(deletedTracks) > 0:
-        uploadedTracks = uploadedTracks - deletedTracks
-        dumpToCache(uploadedTracks)
+        deletedTracks = deleteTracks(uploadedTracks - localTracks)
+        if len(deletedTracks) > 0:
+            uploadedTracks = uploadedTracks - deletedTracks
+            dumpToCache(uploadedTracks)
 
-    tracksToUpload = localTracks - uploadedTracks
-    if len(tracksToUpload) > 0:
-        uploadedTracks = uploadTracks(tracksToUpload, uploadedTracks)
-        dumpToCache(uploadedTracks)
+        tracksToUpload = localTracks - uploadedTracks
+        if len(tracksToUpload) > 0:
+            uploadedTracks = uploadTracks(tracksToUpload, uploadedTracks)
+            dumpToCache(uploadedTracks)
+    except:
+        print("Unexpected error:", sys.exc_info()[0])
+        raise
