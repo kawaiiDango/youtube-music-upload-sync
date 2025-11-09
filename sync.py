@@ -234,7 +234,6 @@ if __name__ == "__main__":
         tracksToDelete = uploadedTracks - localTracks
         if ("--delete" in sys.argv or "-d" in sys.argv) and len(tracksToDelete) > 0:
             print("==> To delete: " + str(len(tracksToDelete)) + " songs")
-            input("Press Enter to start deleting...")
             deletedTracks = deleteTracks(tracksToDelete)
             dumpToCache(uploadedTracks-deletedTracks, UPLOADED_CACHE_JSON)
     
@@ -242,9 +241,13 @@ if __name__ == "__main__":
         tracksToUpload = localTracks - uploadedTracks
         print("==> To upload: " + str(len(tracksToUpload)))
         if len(tracksToUpload) > 0:
-            input("Press Enter to start uploading...")
-            uploadedTracks = uploadTracks(tracksToUpload, uploadedTracks)
-            dumpToCache(uploadedTracks, UPLOADED_CACHE_JSON)
+            if sys.stdout.isatty():
+                startUpload = confirm("Start uploading?")
+            else:
+                startUpload = True
+            if startUpload:
+                uploadedTracks = uploadTracks(tracksToUpload, uploadedTracks)
+                dumpToCache(uploadedTracks, UPLOADED_CACHE_JSON)
     except:
         print("Unexpected error:", sys.exc_info()[0])
         raise
