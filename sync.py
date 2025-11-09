@@ -248,6 +248,8 @@ if __name__ == "__main__":
             if startUpload:
                 uploadedTracks = uploadTracks(tracksToUpload, uploadedTracks)
                 dumpToCache(uploadedTracks, UPLOADED_CACHE_JSON)
+        else:
+            print("All local tracks are already uploaded.")
     except:
         print("Unexpected error:", sys.exc_info()[0])
         raise
